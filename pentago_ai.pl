@@ -6,7 +6,8 @@
 	25	26	27	28	29	30
 	31	32	33	34	35	36
 */
-emptyBoard([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36]).
+emptyBoard([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+	19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36]).
 
 % 32 possible winning cases
 winList([[1,7,13,19,25],[5,11,17,23,29],[8,9,10,11,12],[13,14,15,16,17],
@@ -45,18 +46,23 @@ threatening(board(BlackList, RedList), red, ThreatsCount) :- winList(W), countin
 	5. calculate threatcount
 */
 
-findMoveableList(BlackList, RedList, MoveableList) :- emptyBoard(EmptyBoard), subtract(EmptyBoard, BlackList, TempList), subtract(TempList, RedList, MoveableList), !.
+findMoveableList(BlackList, RedList, MoveableList) :- 
+	emptyBoard(EmptyBoard), 
+	subtract(EmptyBoard, BlackList, TempList), 
+	subtract(TempList, RedList, MoveableList), !.
 
-genRotationList(Pos, List) :- List = [move(Pos, clockwise, top-left), move(Pos, anti-clockwise, top-left), 
-									move(Pos, clockwise, top-right), move(Pos, anti-clockwise, top-right),
-									move(Pos, clockwise, bottom-left), move(Pos, anti-clockwise, bottom-left),
-									move(Pos, clockwise, bottom-right), move(Pos, anti-clockwise, bottom-right)], !.
+genRotationList(Pos, List) :- 
+	List = [move(Pos, clockwise, top-left), move(Pos, anti-clockwise, top-left), 
+			move(Pos, clockwise, top-right), move(Pos, anti-clockwise, top-right),
+			move(Pos, clockwise, bottom-left), move(Pos, anti-clockwise, bottom-left),
+			move(Pos, clockwise, bottom-right), move(Pos, anti-clockwise, bottom-right)], !.
 
 % generate moveable list with 8 rotations
 genFullMoveableList([], InitialList, _, FullMoveableList) :- FullMoveableList = InitialList, !.
-genFullMoveableList([H|T], InitialList, FinalList, FullMoveableList) :- genRotationList(H, RotPosList), 
-													append(InitialList, RotPosList, FinalList), 
-													genFullMoveableList(T, FinalList, _, FullMoveableList).
+genFullMoveableList([H|T], InitialList, FinalList, FullMoveableList) :- 
+	genRotationList(H, RotPosList), 
+	append(InitialList, RotPosList, FinalList), 
+	genFullMoveableList(T, FinalList, _, FullMoveableList).
 
 % List: List to be checked, [H|T]: winList
 checkwin(_, []) :- fail.
@@ -85,125 +91,135 @@ rotateClockwise(Q, N, R) :- member(N, [14, 17, 32, 35]), (isQuad(N, Q), R is N -
 rotateClockwise(Q, N, R) :- member(N, [15, 18, 33, 36]), (isQuad(N, Q), R is N - 2; R is N), !.
 
 rotate(List, move(_, clockwise, Quadrant), ResList) :- maplist(rotateClockwise(Quadrant), List, ResList), !.
-rotate(List, move(_, anti-clockwise, Quadrant), ResList) :- rotate(List, move(_, clockwise, Quadrant), TempList), rotate(TempList, move(_, clockwise, Quadrant), TempTempList), rotate(TempTempList, move(_, clockwise, Quadrant), ResList), !.
+rotate(List, move(_, anti-clockwise, Quadrant), ResList) :- 
+	rotate(List, move(_, clockwise, Quadrant), TempList), 
+	rotate(TempList, move(_, clockwise, Quadrant), TempTempList), 
+	rotate(TempTempList, move(_, clockwise, Quadrant), ResList), !.
 
-genNextBoard(CurPosList, OpPosList, move(Pos, Dir, Quad), NewCurMoveList, NewOpMoveList) :- rotate(CurPosList, move(Pos, Dir, Quad), NewCurMoveListTemp),
-																							sort(NewCurMoveListTemp, NewCurMoveList),
-																							rotate(OpPosList, move(Pos, Dir, Quad), NewOpMoveListTemp),
-																							sort(NewOpMoveListTemp, NewOpMoveList).
+genNextBoard(CurPosList, OpPosList, move(Pos, Dir, Quad), NewCurMoveList, NewOpMoveList) :- 
+	rotate(CurPosList, move(Pos, Dir, Quad), NewCurMoveListTemp),
+	sort(NewCurMoveListTemp, NewCurMoveList),
+	rotate(OpPosList, move(Pos, Dir, Quad), NewOpMoveListTemp),
+	sort(NewOpMoveListTemp, NewOpMoveList).
 
 
 findVal(_, _, _, [], Initial, _, MaxValList) :- MaxValList = Initial, !.
-findVal(Color, FirstLayerCurPosList, FirstLayerOpPosList, [move(Pos, Dir, Quad)|T], Initial, Final, MaxValList) :- (
-																				(
-																					winList(W), 
-																					append(FirstLayerCurPosList, [Pos], SecondLayerList),
-																					checkwin(SecondLayerList, W),
-																					append(Initial, [[1000, move(Pos, Dir, Quad)]], Final)														
-																				);
-																				(
-																					(
-																						winList(W), 
-																						append(FirstLayerCurPosList, [Pos], SecondLayerList),
-																						rotate(SecondLayerList, move(Pos, Dir, Quad), SecondLayerRotList),
-																						checkwin(SecondLayerRotList, W),
-																						append(Initial, [[1000, move(Pos, Dir, Quad)]], Final)
-																					);
-																					(
-																						(Color == black)->(
-																											append(FirstLayerCurPosList, [Pos], SecondLayerList),
-																											genNextBoard(SecondLayerList, FirstLayerOpPosList, move(Pos, Dir, Quad), ThirdLayerCurPosList, ThirdLayerOpPosList),
-																											threatening(board(ThirdLayerOpPosList, ThirdLayerCurPosList), black, ThreatsCount),
-																											append(Initial, [[ThreatsCount, move(Pos, Dir, Quad)]], Final)
-																										);
-																										(
-																											append(FirstLayerCurPosList, [Pos], SecondLayerList),
-																											genNextBoard(SecondLayerList, FirstLayerOpPosList, move(Pos, Dir, Quad), ThirdLayerCurPosList, ThirdLayerOpPosList),
-																											threatening(board(ThirdLayerCurPosList, ThirdLayerOpPosList), red, ThreatsCount),
-																											append(Initial, [[ThreatsCount, move(Pos, Dir, Quad)]], Final)
-																										)
-
-																					)										
-																				)
-																				), findVal(Color, FirstLayerCurPosList, FirstLayerOpPosList, T, Final, _, MaxValList).
+findVal(Color, FirstLayerCurPosList, FirstLayerOpPosList, [move(Pos, Dir, Quad)|T], Initial, Final, MaxValList) :- 
+	(
+		(
+			winList(W), 
+			append(FirstLayerCurPosList, [Pos], SecondLayerList),
+			checkwin(SecondLayerList, W),
+			append(Initial, [[1000, move(Pos, Dir, Quad)]], Final)														
+		);
+		(
+			(
+				winList(W), 
+				append(FirstLayerCurPosList, [Pos], SecondLayerList),
+				rotate(SecondLayerList, move(Pos, Dir, Quad), SecondLayerRotList),
+				checkwin(SecondLayerRotList, W),
+				append(Initial, [[1000, move(Pos, Dir, Quad)]], Final)
+			);
+			(
+				(Color == black)->(
+					append(FirstLayerCurPosList, [Pos], SecondLayerList),
+					genNextBoard(SecondLayerList, FirstLayerOpPosList, move(Pos, Dir, Quad), ThirdLayerCurPosList, ThirdLayerOpPosList),
+					threatening(board(ThirdLayerOpPosList, ThirdLayerCurPosList), black, ThreatsCount),
+					append(Initial, [[ThreatsCount, move(Pos, Dir, Quad)]], Final)
+				);
+				(
+					append(FirstLayerCurPosList, [Pos], SecondLayerList),
+					genNextBoard(SecondLayerList, FirstLayerOpPosList, move(Pos, Dir, Quad), ThirdLayerCurPosList, ThirdLayerOpPosList),
+					threatening(board(ThirdLayerCurPosList, ThirdLayerOpPosList), red, ThreatsCount),
+					append(Initial, [[ThreatsCount, move(Pos, Dir, Quad)]], Final)
+				)
+			)										
+		)
+	), findVal(Color, FirstLayerCurPosList, FirstLayerOpPosList, T, Final, _, MaxValList).
 
 retrieveVal([Val, _], R) :- R = Val, !.
 
 % not win in first put, go to the first layer
 goToFirstLayer(_, _, _, [], Initial, _, MinValList) :- MinValList = Initial, !.
-goToFirstLayer(Color, CurPosList, OpPosList, [move(Pos, Dir, Quad)|T], Initial, Final, MinValList) :- append(CurPosList, [Pos], FirstLayerList),
-																										genNextBoard(FirstLayerList, OpPosList, move(Pos, Dir, Quad), FirstLayerCurPosList, FirstLayerOpPosList),
-																										findMoveableList(FirstLayerOpPosList, FirstLayerCurPosList, FirstLayerMoveableList),
-																										genFullMoveableList(FirstLayerMoveableList, [], _, FirstLayerFullMoveableList),
-																										findVal(Color, FirstLayerOpPosList, FirstLayerCurPosList, FirstLayerFullMoveableList, [], _, MaxValList),
-																										msort(MaxValList, SortMaxValList),
-																										last(SortMaxValList, MaxVal),
-																										retrieveVal(MaxVal, Val),
-																										append(Initial, [[Val, move(Pos, Dir, Quad)]], Final),
-																										goToFirstLayer(Color, CurPosList, OpPosList, T, Final, _, MinValList).
+goToFirstLayer(Color, CurPosList, OpPosList, [move(Pos, Dir, Quad)|T], Initial, Final, MinValList) :- 
+	append(CurPosList, [Pos], FirstLayerList),
+	genNextBoard(FirstLayerList, OpPosList, move(Pos, Dir, Quad), FirstLayerCurPosList, FirstLayerOpPosList),
+	findMoveableList(FirstLayerOpPosList, FirstLayerCurPosList, FirstLayerMoveableList),
+	genFullMoveableList(FirstLayerMoveableList, [], _, FirstLayerFullMoveableList),
+	findVal(Color, FirstLayerOpPosList, FirstLayerCurPosList, FirstLayerFullMoveableList, [], _, MaxValList),
+	msort(MaxValList, SortMaxValList),
+	last(SortMaxValList, MaxVal),
+	retrieveVal(MaxVal, Val),
+	append(Initial, [[Val, move(Pos, Dir, Quad)]], Final),
+	goToFirstLayer(Color, CurPosList, OpPosList, T, Final, _, MinValList).
+	
 % win in first put
 findBestMove(_, _, [], _, _, _) :- fail.
-findBestMove(CurPosList, OpPosList, [move(Pos, Dir, Quad)|T], BestMove, NewCurMoveList, NewOpMoveList) :- (
-																											winList(W), 
-																											append(CurPosList, [Pos], FirstLayerList),
-																											checkwin(FirstLayerList, W),
-																											BestMove = move(Pos, Dir, Quad),
-																											%genNextBoard(FirstLayerList, OpPosList, BestMove, NewCurMoveList, NewOpMoveList),
-																											NewCurMoveList = FirstLayerList,
-																											NewOpMoveList = OpPosList,
-																											!
-																										);
-																										(
-																											winList(W), 
-																											append(CurPosList, [Pos], FirstLayerList),
-																											rotate(FirstLayerList, move(Pos, Dir, Quad), FirstLayerRotList),
-																											checkwin(FirstLayerRotList, W),
-																											BestMove = move(Pos, Dir, Quad),
-																											genNextBoard(FirstLayerList, OpPosList, BestMove, NewCurMoveList, NewOpMoveList),
-																											!
-																										);
-																										(
-																											findBestMove(CurPosList, OpPosList, T, BestMove, NewCurMoveList, NewOpMoveList)
-																										)
-																										.
+findBestMove(CurPosList, OpPosList, [move(Pos, Dir, Quad)|T], BestMove, NewCurMoveList, NewOpMoveList) :- 
+	(
+		winList(W), 
+		append(CurPosList, [Pos], FirstLayerList),
+		checkwin(FirstLayerList, W),
+		BestMove = move(Pos, Dir, Quad),
+		%genNextBoard(FirstLayerList, OpPosList, BestMove, NewCurMoveList, NewOpMoveList),
+		NewCurMoveList = FirstLayerList,
+		NewOpMoveList = OpPosList,
+		!
+	);
+	(
+		winList(W), 
+		append(CurPosList, [Pos], FirstLayerList),
+		rotate(FirstLayerList, move(Pos, Dir, Quad), FirstLayerRotList),
+		checkwin(FirstLayerRotList, W),
+		BestMove = move(Pos, Dir, Quad),
+		genNextBoard(FirstLayerList, OpPosList, BestMove, NewCurMoveList, NewOpMoveList),
+		!
+	);
+	(
+		findBestMove(CurPosList, OpPosList, T, BestMove, NewCurMoveList, NewOpMoveList)
+	).
 																				
 retrieveBestMove([_, move(Pos, Dir, Quad)], BestMove) :- BestMove = move(Pos, Dir, Quad), !.
 
 getPos(move(Pos, _, _), R) :- R = Pos, !.
 
-pentago_ai(board(BlackList, RedList), black, BestMove, board(NewBlackList, NewRedList)) :- (findMoveableList(BlackList, RedList, MoveableList), 
-																							genFullMoveableList(MoveableList, [], _, FullMoveableList), 
-																							findBestMove(BlackList, RedList, FullMoveableList, BestMove, NewBlackList, NewRedList));
-																							(
-																								findMoveableList(RedList, BlackList, MoveableList), 
-																								genFullMoveableList(MoveableList, [], _, FullMoveableList),
-																								goToFirstLayer(black, BlackList, RedList, FullMoveableList, [], _, MinValList),
-																								msort(MinValList, SortMinValList),
-																								reverse(SortMinValList, RevSortMinValList),
-																								last(RevSortMinValList, MinVal),
-																								retrieveBestMove(MinVal, BestMove),
-																								getPos(BestMove, Pos),
-																								append(BlackList, [Pos], TempBlackList),
-																								genNextBoard(TempBlackList, RedList, BestMove, NewBlackList, NewRedList)
-																							).
-																							%(BestMove = move(1, clockwise, top-left),NewBlackList = [],NewRedList = []).
+pentago_ai(board(BlackList, RedList), black, BestMove, board(NewBlackList, NewRedList)) :- 
+	(
+		findMoveableList(BlackList, RedList, MoveableList), 
+		genFullMoveableList(MoveableList, [], _, FullMoveableList), 
+		findBestMove(BlackList, RedList, FullMoveableList, BestMove, NewBlackList, NewRedList));
+		(
+			findMoveableList(RedList, BlackList, MoveableList), 
+			genFullMoveableList(MoveableList, [], _, FullMoveableList),
+			goToFirstLayer(black, BlackList, RedList, FullMoveableList, [], _, MinValList),
+			msort(MinValList, SortMinValList),
+			reverse(SortMinValList, RevSortMinValList),
+			last(RevSortMinValList, MinVal),
+			retrieveBestMove(MinVal, BestMove),
+			getPos(BestMove, Pos),
+			append(BlackList, [Pos], TempBlackList),
+			genNextBoard(TempBlackList, RedList, BestMove, NewBlackList, NewRedList)
+		).
+		%(BestMove = move(1, clockwise, top-left),NewBlackList = [],NewRedList = []).
 
-pentago_ai(board(BlackList, RedList), red, BestMove, board(NewBlackList, NewRedList)) :- (findMoveableList(RedList, BlackList, MoveableList), 
-																							genFullMoveableList(MoveableList, [], _, FullMoveableList),
-																							findBestMove(RedList, BlackList, FullMoveableList, BestMove, NewRedList, NewBlackList));
-																							(
-																								findMoveableList(RedList, BlackList, MoveableList), 
-																								genFullMoveableList(MoveableList, [], _, FullMoveableList),
-																								goToFirstLayer(red, RedList, BlackList, FullMoveableList, [], _, MinValList),
-																								msort(MinValList, SortMinValList),
-																								reverse(SortMinValList, RevSortMinValList),
-																								last(RevSortMinValList, MinVal),
-																								retrieveBestMove(MinVal, BestMove),
-																								getPos(BestMove, Pos),
-																								append(RedList, [Pos], TempRedList),
-																								genNextBoard(TempRedList, BlackList, BestMove, NewRedList, NewBlackList)
-																							).
-																							%(BestMove = move(1, clockwise, top-left),NewBlackList = [],NewRedList = []).
+pentago_ai(board(BlackList, RedList), red, BestMove, board(NewBlackList, NewRedList)) :- 
+	(
+		findMoveableList(RedList, BlackList, MoveableList), 
+		genFullMoveableList(MoveableList, [], _, FullMoveableList),
+		findBestMove(RedList, BlackList, FullMoveableList, BestMove, NewRedList, NewBlackList));
+		(
+			findMoveableList(RedList, BlackList, MoveableList), 
+			genFullMoveableList(MoveableList, [], _, FullMoveableList),
+			goToFirstLayer(red, RedList, BlackList, FullMoveableList, [], _, MinValList),
+			msort(MinValList, SortMinValList),
+			reverse(SortMinValList, RevSortMinValList),
+			last(RevSortMinValList, MinVal),
+			retrieveBestMove(MinVal, BestMove),
+			getPos(BestMove, Pos),
+			append(RedList, [Pos], TempRedList),
+			genNextBoard(TempRedList, BlackList, BestMove, NewRedList, NewBlackList)
+		).
+		%(BestMove = move(1, clockwise, top-left),NewBlackList = [],NewRedList = []).
 
 /*
 pentago_ai(board(BlackList, RedList),black,move(3,clockwise,top-right),NextBoard).
